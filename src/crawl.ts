@@ -9,3 +9,13 @@ export function normalizeURL(url: string): string {
 
         return fullPath
 }
+
+export function getH1FromHTML(html: string): string {
+        const dom = new JSDOM(html);
+        let firstH1 = dom.window.document.getElementsByTagName("h1")[0]
+        if (!firstH1) {
+                return ""
+        }
+        let firstH1Text = firstH1?.textContent ?? "";
+        return firstH1Text
+}
