@@ -36,3 +36,24 @@ export function getFirstParagraphFromHTML(html: string): string {
         let firstPText = firstP.textContent ?? "";
         return firstPText
 }
+
+export function getURLsFromHTML(html: string, baseURL: string): string[] {
+    let urls: string[] = [];
+    try {
+        const dom = new JSDOM(html);
+        let aTags: NodeListOf<HTMLAnchorElement> = dom.window.document.querySelectorAll("a");
+        for (let i: number = 0; i < aTags.length; i++) {
+            let relURL: string | null = aTags[i].getAttribute("href");
+            if (!relURL) {
+                continue
+            }
+            let absoluteURL = new URL(relURL, baseURL).toString();
+            urls.push(absoluteURL);
+        }
+    } catch (err) {
+        console.error("failed to parse HTML:", err);
+    }
+        
+
+    return urls;
+}

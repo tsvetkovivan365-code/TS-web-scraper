@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML } from './crawl.js';
+import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML } from './crawl.js';
 
 test('https url to directory equals blog.cake.dev/path', () => {
         expect(normalizeURL("https://blog.cake.dev/path/")).toBe("blog.cake.dev/path")
@@ -60,5 +60,36 @@ test("getFirstParagraphFromHTML no paragraphs", () => {
   const inputBody = `<html><body><h1>Title</h1></body></html>`;
   const actual = getFirstParagraphFromHTML(inputBody);
   const expected = "";
+  expect(actual).toEqual(expected);
+});
+
+test("getURLsFromHTML absolute", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody = `<html><body><a href="https://blog.boot.dev"><span>Boot.dev</span></a></body></html>`;
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://blog.boot.dev/"];
+  expect(actual).toEqual(expected);
+});
+
+test("getURLsFromHTML relative", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody = `<html><body><a href="/path/one"><span>Boot.dev</span></a></body></html>`;
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = ["https://blog.boot.dev/path/one"];
+  expect(actual).toEqual(expected);
+});
+
+test("getURLsFromHTML both absolute and relative", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody =
+    `<html><body>` +
+    `<a href="/path/one"><span>Boot.dev</span></a>` +
+    `<a href="https://other.com/path/one"><span>Boot.dev</span></a>` +
+    `</body></html>`;
+  const actual = getURLsFromHTML(inputBody, inputURL);
+  const expected = [
+    "https://blog.boot.dev/path/one",
+    "https://other.com/path/one",
+  ];
   expect(actual).toEqual(expected);
 });
