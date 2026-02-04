@@ -57,3 +57,26 @@ export function getURLsFromHTML(html: string, baseURL: string): string[] {
 
     return urls;
 }
+
+export function getImagesFromHTML(html: string, baseURL: string): string[] {
+    let imageURLs: string[] = [];
+    try {
+        const dom = new JSDOM(html);
+        let images: NodeListOf<HTMLImageElement> = dom.window.document.querySelectorAll("img");
+        for (let i: number = 0; i < images.length; i++) {
+            let src: string | null = images[i].getAttribute("src");
+            if (!src) {
+                continue
+            }
+            let absoluteURL = new URL(src, baseURL);
+            imageURLs.push(absoluteURL.toString())
+        }
+    } catch (err) {
+        console.error("failed to parse HTML:", err);
+    }
+        
+
+    return imageURLs;
+    
+}
+

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML } from './crawl.js';
+import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML } from './crawl.js';
 
 test('https url to directory equals blog.cake.dev/path', () => {
         expect(normalizeURL("https://blog.cake.dev/path/")).toBe("blog.cake.dev/path")
@@ -64,23 +64,23 @@ test("getFirstParagraphFromHTML no paragraphs", () => {
 });
 
 test("getURLsFromHTML absolute", () => {
-  const inputURL = "https://blog.boot.dev";
-  const inputBody = `<html><body><a href="https://blog.boot.dev"><span>Boot.dev</span></a></body></html>`;
+  const inputURL = "https://blog.cake.dev";
+  const inputBody = `<html><body><a href="https://blog.cake.dev"><span>Cake.dev</span></a></body></html>`;
   const actual = getURLsFromHTML(inputBody, inputURL);
-  const expected = ["https://blog.boot.dev/"];
+  const expected = ["https://blog.cake.dev/"];
   expect(actual).toEqual(expected);
 });
 
 test("getURLsFromHTML relative", () => {
-  const inputURL = "https://blog.boot.dev";
+  const inputURL = "https://blog.cake.dev";
   const inputBody = `<html><body><a href="/path/one"><span>Boot.dev</span></a></body></html>`;
   const actual = getURLsFromHTML(inputBody, inputURL);
-  const expected = ["https://blog.boot.dev/path/one"];
+  const expected = ["https://blog.cake.dev/path/one"];
   expect(actual).toEqual(expected);
 });
 
 test("getURLsFromHTML both absolute and relative", () => {
-  const inputURL = "https://blog.boot.dev";
+  const inputURL = "https://blog.cake.dev";
   const inputBody =
     `<html><body>` +
     `<a href="/path/one"><span>Boot.dev</span></a>` +
@@ -88,8 +88,40 @@ test("getURLsFromHTML both absolute and relative", () => {
     `</body></html>`;
   const actual = getURLsFromHTML(inputBody, inputURL);
   const expected = [
-    "https://blog.boot.dev/path/one",
+    "https://blog.cake.dev/path/one",
     "https://other.com/path/one",
   ];
   expect(actual).toEqual(expected);
 });
+
+test("getImagesFromHTML absolute", () => {
+  const inputURL = "https://blog.cake.dev";
+  const inputBody = `<html><body><img src="https://blog.cake.dev/logo.png" alt="Logo"></body></html>`;
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://blog.cake.dev/logo.png"];
+  expect(actual).toEqual(expected);
+});
+
+test("getImagesFromHTML relative", () => {
+  const inputURL = "https://blog.cake.dev";
+  const inputBody = `<html><body><img src="/logo.png" alt="Logo"></body></html>`;
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = ["https://blog.cake.dev/logo.png"];
+  expect(actual).toEqual(expected);
+});
+
+test("getImagesFromHTML multiple", () => {
+  const inputURL = "https://blog.cake.dev";
+  const inputBody =
+    `<html><body>` +
+    `<img src="/logo.png" alt="Logo">` +
+    `<img src="https://cdn.cake.dev/banner.jpg">` +
+    `</body></html>`;
+  const actual = getImagesFromHTML(inputBody, inputURL);
+  const expected = [
+    "https://blog.cake.dev/logo.png",
+    "https://cdn.cake.dev/banner.jpg",
+  ];
+  expect(actual).toEqual(expected);
+});
+
