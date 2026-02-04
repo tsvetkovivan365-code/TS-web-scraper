@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML } from './crawl.js';
+import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML, extractPageData } from './crawl.js';
 
 test('https url to directory equals blog.cake.dev/path', () => {
         expect(normalizeURL("https://blog.cake.dev/path/")).toBe("blog.cake.dev/path")
@@ -125,3 +125,58 @@ test("getImagesFromHTML multiple", () => {
   expect(actual).toEqual(expected);
 });
 
+test("extract_page_data basic", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody = `
+    <html><body>
+      <h1>Test Title</h1>
+      <p>This is the first paragraph.</p>
+      <a href="/link1">Link 1</a>
+      <img src="/image1.jpg" alt="Image 1">
+    </body></html>
+  `;
+
+  const actual = extractPageData(inputBody, inputURL);
+  const expected = {
+    url: "https://blog.boot.dev",
+    h1: "Test Title",
+    first_paragraph: "This is the first paragraph.",
+    outgoing_links: ["https://blog.boot.dev/link1"],
+    image_urls: ["https://blog.boot.dev/image1.jpg"],
+  };
+
+  expect(actual).toEqual(expected);
+});
+
+test("extract_page_data main section priority", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody = `
+    <html><body>
+      <nav><p>Navigation paragraph</p></nav>
+      <main>
+        <h1>Main Title</h1>
+        <p>Main paragraph content.</p>
+      </main>
+    </body></html>
+  `;
+
+  const actual = extractPageData(inputBody, inputURL);
+  expect(actual.h1).toEqual("Main Title");
+  expect(actual.first_paragraph).toEqual("Main paragraph content.");
+});
+
+test("extract_page_data missing elements", () => {
+  const inputURL = "https://blog.boot.dev";
+  const inputBody = `<html><body><div>No h1, p, links, or images</div></body></html>`;
+
+  const actual = extractPageData(inputBody, inputURL);
+  const expected = {
+    url: "https://blog.boot.dev",
+    h1: "",
+    first_paragraph: "",
+    outgoing_links: [],
+    image_urls: [],
+  };
+
+  expect(actual).toEqual(expected);
+});

@@ -80,3 +80,25 @@ export function getImagesFromHTML(html: string, baseURL: string): string[] {
     
 }
 
+export type ExtractedPageData = {
+  url: string;
+  h1: string;
+  first_paragraph: string;
+  outgoing_links: string[];
+  image_urls: string[];
+};
+
+export function extractPageData(html: string, pageURL: string): ExtractedPageData {
+    let h1 = getH1FromHTML(html);
+    let firstParagraph = getFirstParagraphFromHTML(html);
+    let outgoingLinks = getURLsFromHTML(html, pageURL);
+    let imageURLs = getImagesFromHTML(html, pageURL);
+
+    return {
+        "url": pageURL,
+        "h1": h1,
+        "first_paragraph": firstParagraph,
+        "outgoing_links": outgoingLinks,
+        "image_urls": imageURLs
+    }
+}
