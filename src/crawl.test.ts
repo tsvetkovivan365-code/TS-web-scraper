@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeURL, getH1FromHTML } from './crawl.js';
+import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML } from './crawl.js';
 
 test('https url to directory equals blog.cake.dev/path', () => {
         expect(normalizeURL("https://blog.cake.dev/path/")).toBe("blog.cake.dev/path")
@@ -27,6 +27,38 @@ test("getH1FromHTML basic", () => {
 test("getH1FromHTML no h1", () => {
   const inputBody = `<html><body><p>No H1 here</p></body></html>`;
   const actual = getH1FromHTML(inputBody);
+  const expected = "";
+  expect(actual).toEqual(expected);
+});
+
+test("getFirstParagraphFromHTML main priority", () => {
+  const inputBody = `
+    <html><body>
+      <p>Outside paragraph.</p>
+      <main>
+        <p>Main paragraph.</p>
+      </main>
+    </body></html>
+  `;
+  const actual = getFirstParagraphFromHTML(inputBody);
+  const expected = "Main paragraph.";
+  expect(actual).toEqual(expected);
+});
+
+test("getFirstParagraphFromHTML fallback to first p", () => {
+  const inputBody = `
+    <html><body>
+      <p>First outside paragraph.</p>
+      <p>Second outside paragraph.</p>
+    </body></html>`;
+  const actual = getFirstParagraphFromHTML(inputBody);
+  const expected = "First outside paragraph.";
+  expect(actual).toEqual(expected);
+});
+
+test("getFirstParagraphFromHTML no paragraphs", () => {
+  const inputBody = `<html><body><h1>Title</h1></body></html>`;
+  const actual = getFirstParagraphFromHTML(inputBody);
   const expected = "";
   expect(actual).toEqual(expected);
 });

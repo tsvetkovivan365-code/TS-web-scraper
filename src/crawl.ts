@@ -19,3 +19,20 @@ export function getH1FromHTML(html: string): string {
         let firstH1Text = firstH1?.textContent ?? "";
         return firstH1Text
 }
+
+export function getFirstParagraphFromHTML(html: string): string {
+        const dom = new JSDOM(html);
+        let firstP;
+        let main = dom.window.document.getElementsByTagName("main")[0];
+        if (main) {
+                firstP = main.getElementsByTagName("p")[0];
+        } else {
+                firstP = dom.window.document.getElementsByTagName("p")[0]
+        }
+
+        if (!firstP) {
+                return ""
+        }
+        let firstPText = firstP.textContent ?? "";
+        return firstPText
+}
