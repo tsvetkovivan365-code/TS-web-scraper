@@ -168,8 +168,6 @@ export async function crawlPage(
     if (!html) {
         return pages;
     }
-    
-    console.log(currentURL);
 
     const urls = getURLsFromHTML(html, baseURL);
     for (let url of urls) {
