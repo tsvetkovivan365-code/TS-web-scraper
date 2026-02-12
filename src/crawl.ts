@@ -1,4 +1,90 @@
 import { JSDOM } from "jsdom";
+import pLimit, { LimitFunction } from 'p-limit';
+
+class ConcurrentCrawler {
+    // Starting URL for the crawl
+    private baseURL: string;
+    // 
+    private pages: Record<string, number>;
+    private limit: <T>(fn: () => Promise<T>) => Promise<T>;
+    constructor(baseURL: string, maxConcurrency: number) {
+        this.baseURL = baseURL;
+        this.pages = {};
+        this.limit = pLimit(maxConcurrency);
+    }
+
+    // Record a visit to a normalized URL
+    private addPageVisit(normalizedURL: string): boolean {
+        if (this.pages[normalizedURL]) {
+            this.pages[normalizedURL] += 1;
+            return false;
+        } else {
+            this.pages[normalizedURL] = 1;
+            return true;
+        }
+    }
+
+    // Fetch the HTML for currentURL, but according to the concurrency limiter
+    private async getHTML(currentURL: string): Promise<string> {
+        return await this.limit(async () => {
+            const reqHeaders = new Headers();
+
+            reqHeaders.set("User-Agent", "CakeCrawler/1.0");
+            const options = {
+                headers: reqHeaders
+            }
+
+            const req = new Request(currentURL, options);
+
+            let res;
+            try {
+                res = await fetch(req);
+            } catch (err) {
+                throw new Error(`Network error: ${(err as Error).message}`);
+            }
+            
+            if (res.status > 399) {
+                throw new Error(`HTTP error: ${res.status} ${res.statusText}`);
+            }
+
+            const contentType = res.headers.get('content-type');
+            if (!contentType?.includes('text/html')) {
+                throw new Error(`Non-HTML response: ${contentType}`);
+            }
+
+            return res.text()
+        });
+    }
+
+    // Recursively crawl a page
+    private async crawlPage(currentURL: string): Promise<void> {
+
+        const normalized = normalizeURL(currentURL);
+        if (!this.addPageVisit(normalized)) return;
+
+        const addedPageVisit = this.addPageVisit(currentURL);
+        if (addedPageVisit) return;
+
+        const html = await this.getHTML(currentURL);
+        const urls = getURLsFromHTML(html, this.baseURL);
+
+        const crawlPromises = urls.map((u) => this.crawlPage(u));
+        await Promise.all(crawlPromises);
+    }
+
+    // Public entrypoint
+    async crawl() {
+        await this.crawlPage(this.baseURL);
+        return this.pages;
+    }
+}
+
+// Wrapper for creating the crawler, running it and returning the final pages record
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number) {
+    const crawler = new ConcurrentCrawler(baseURL, maxConcurrency);
+    let pages = await crawler.crawl()
+    return pages;
+}
 
 // Parsed info we collect from a page
 export type ExtractedPageData = {
