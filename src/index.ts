@@ -29,7 +29,12 @@ async function main() {
 
     const pages = await crawlSiteAsync(baseURL, maxConcurrency, maxPages);
 
-    console.log(pages);
+    console.log("Finished crawling.");
+    console.log(Object.keys(pages).length)
+    const firstPage = Object.values(pages)[0];
+    if (firstPage) {
+        console.log(`First page record: ${firstPage["url"]} - ${firstPage["h1"]}`);
+    }
 }
 
 main();
