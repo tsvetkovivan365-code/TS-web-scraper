@@ -1,24 +1,40 @@
 import { JSDOM } from "jsdom";
-import pLimit, { LimitFunction } from 'p-limit';
+import pLimit from 'p-limit';
 
 class ConcurrentCrawler {
-    // Starting URL for the crawl
-    private baseURL: string;
-    // 
+    private baseURL: string; 
     private pages: Record<string, number>;
     private limit: <T>(fn: () => Promise<T>) => Promise<T>;
-    constructor(baseURL: string, maxConcurrency: number) {
+    private shouldStop: boolean;
+    private maxPages: number;
+    private allTasks: Set<Promise<void>>;
+    private abortController: AbortController;
+
+    constructor(baseURL: string, maxConcurrency: number, maxPages: number) {
         this.baseURL = baseURL;
         this.pages = {};
         this.limit = pLimit(maxConcurrency);
+        this.maxPages = maxPages;
+        this.shouldStop = false;
+        this.allTasks = new Set([]);
+        this.abortController = new AbortController();
     }
 
     // Record a visit to a normalized URL
     private addPageVisit(normalizedURL: string): boolean {
+        if (this.shouldStop) return false;
+
         if (this.pages[normalizedURL]) {
             this.pages[normalizedURL] += 1;
             return false;
         } else {
+            if (Object.keys(this.pages).length >= this.maxPages) {
+                this.shouldStop = true;
+                console.log("Reached maximum number of pages to crawl.")
+                this.abortController.abort();
+                return false;
+            }
+
             this.pages[normalizedURL] = 1;
             return true;
         }
@@ -31,7 +47,8 @@ class ConcurrentCrawler {
 
             reqHeaders.set("User-Agent", "CakeCrawler/1.0");
             const options = {
-                headers: reqHeaders
+                headers: reqHeaders,
+                signal: this.abortController.signal,
             }
 
             const req = new Request(currentURL, options);
@@ -40,6 +57,9 @@ class ConcurrentCrawler {
             try {
                 res = await fetch(req);
             } catch (err) {
+                if ((err as any)?.name === "AbortError" || this.shouldStop) {
+                    return "";
+                }
                 throw new Error(`Network error: ${(err as Error).message}`);
             }
             
@@ -59,29 +79,48 @@ class ConcurrentCrawler {
     // Recursively crawl a page
     private async crawlPage(currentURL: string): Promise<void> {
 
-        const normalized = normalizeURL(currentURL);
-        if (!this.addPageVisit(normalized)) return;
+        if (this.shouldStop) return;
 
-        const addedPageVisit = this.addPageVisit(currentURL);
-        if (addedPageVisit) return;
+        const normalized = normalizeURL(currentURL);
+        const addedPageVisit = this.addPageVisit(normalized);
+        if (!addedPageVisit) return;
+
+        console.log(currentURL);
 
         const html = await this.getHTML(currentURL);
+        if (!html) return;
+
         const urls = getURLsFromHTML(html, this.baseURL);
 
-        const crawlPromises = urls.map((u) => this.crawlPage(u));
-        await Promise.all(crawlPromises);
+        for (const u of urls) {
+            if (this.shouldStop) break;
+            const task = this.crawlPage(u);
+            this.allTasks.add(task);
+            task.finally(() => this.allTasks.delete(task));
+        }
     }
 
     // Public entrypoint
-    async crawl() {
-        await this.crawlPage(this.baseURL);
+    async crawl(): Promise<Record<string, number>> {
+        const first = this.crawlPage(this.baseURL);
+        this.allTasks.add(first);
+        first.finally(() => this.allTasks.delete(first));
+
+        while (this.allTasks.size > 0) {
+            await Promise.race(this.allTasks);
+        }
+
         return this.pages;
     }
 }
 
 // Wrapper for creating the crawler, running it and returning the final pages record
-export async function crawlSiteAsync(baseURL: string, maxConcurrency: number) {
-    const crawler = new ConcurrentCrawler(baseURL, maxConcurrency);
+export async function crawlSiteAsync(
+    baseURL: string,
+    maxConcurrency: number = 3,
+    maxPages: number = 50
+    ): Promise<Record<string, number>> {
+    const crawler = new ConcurrentCrawler(baseURL, maxConcurrency, maxPages);
     let pages = await crawler.crawl()
     return pages;
 }
