@@ -16,7 +16,7 @@ class ConcurrentCrawler {
         this.limit = pLimit(maxConcurrency);
         this.maxPages = maxPages;
         this.shouldStop = false;
-        this.allTasks = new Set([]);
+        this.allTasks = new Set<Promise<void>>();
         this.abortController = new AbortController();
     }
     

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML, extractPageData } from './crawl.js';
+import { normalizeURL, getH1FromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML, extractPageData } from './crawl.ts';
 
 test('https url to directory equals blog.cake.dev/path', () => {
         expect(normalizeURL("https://blog.cake.dev/path/")).toBe("blog.cake.dev/path")

@@ -1,5 +1,6 @@
 import { argv } from "node:process";
-import { crawlSiteAsync } from "./crawl.js";
+import { crawlSiteAsync } from "./crawl.ts";
+import { writeCSVReport } from "./report.ts";
 
 async function main() {
     if (argv.length < 5) {
@@ -29,12 +30,7 @@ async function main() {
 
     const pages = await crawlSiteAsync(baseURL, maxConcurrency, maxPages);
 
-    console.log("Finished crawling.");
-    console.log(Object.keys(pages).length)
-    const firstPage = Object.values(pages)[0];
-    if (firstPage) {
-        console.log(`First page record: ${firstPage["url"]} - ${firstPage["h1"]}`);
-    }
+    writeCSVReport(pages);
 }
 
 main();
